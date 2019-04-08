@@ -1,0 +1,34 @@
+kind: pipeline
+name: default
+steps:
+- name: generate-tags
+  image: quay.io/natlibfi/drone-gen-tags
+- name: build
+  image: node:8
+  commands:
+  - npm install
+  - npm test
+  - npm run build:transpile
+- name: npm
+  image: plugins/npm
+  settings:
+    token:
+      from_secret: npm_token
+  when:
+    event: tag
+- name: docker 
+  image: plugins/docker
+  settings:
+    repo: quay.io/natlibfi/melinda-record-import-cli
+    registry: quay.io
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+  when:
+    ref:
+    #- refs/heads/master
+    #- refs/heads/test
+    - refs/tags/*
+trigger:
+  event: [push, tag]
