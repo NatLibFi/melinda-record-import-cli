@@ -9,12 +9,13 @@ steps:
   - npm install
   - npm test
   - npm run build
-  image: plugins/npm
-  settings:
-    token:
-      from_secret: npm_token
-  when:
-    event: tag
+  - name: npm
+    image: plugins/npm
+    settings:
+      token:
+        from_secret: npm_token
+    when:
+      event: tag
 - name: docker 
   image: plugins/docker
   settings:
