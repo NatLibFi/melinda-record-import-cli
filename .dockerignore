@@ -1,0 +1,6 @@
+.git
+node_modules
+.env
+package-lock.json
+.travis.yml
+.drone.yml

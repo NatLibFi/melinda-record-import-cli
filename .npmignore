@@ -4,3 +4,6 @@ src
 test-fixtures
 .drone.yml
 .travis.yml
+.dockerignore
+Dockerfile
+.env

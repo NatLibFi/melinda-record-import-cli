@@ -8,8 +8,7 @@ steps:
   commands:
   - npm install
   - npm test
-  - npm run build:transpile
-- name: npm
+  - npm run build
   image: plugins/npm
   settings:
     token:
@@ -27,8 +26,8 @@ steps:
       from_secret: docker_password
   when:
     ref:
-    #- refs/heads/master
-    #- refs/heads/test
+    - refs/heads/master
+    - refs/heads/test
     - refs/tags/*
 trigger:
   event: [push, tag]
