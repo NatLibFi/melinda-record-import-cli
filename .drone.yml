@@ -27,9 +27,8 @@ steps:
       from_secret: docker_password
   when:
     ref:
-    - refs/heads/dev
-    #- refs/heads/master
-    #- refs/heads/test
-    #- refs/tags/*
+    - refs/heads/master
+    - refs/heads/test
+    - refs/tags/*
 trigger:
   event: [push, tag]
