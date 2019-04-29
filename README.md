@@ -16,6 +16,7 @@ You can use stdin in the container as follows:
 ```sh
 $ docker run \
   --rm \
+  -v /etc/localtime:/etc/localtime:ro \
   -i \
   --env-file .env \
   quay.io/natlibfi/melinda-record-import-cli profiles create foo
@@ -25,6 +26,7 @@ Or mount the the files directly:
 ```sh
 $ docker run \
   --rm \
+  -v /etc/localtime:/etc/localtime:ro \
   --env-file .env 
   -v $PWD/profile.json:/data.json:ro \
   quay.io/natlibfi/melinda-record-import-cli profiles create foo /data.json
