@@ -120,6 +120,11 @@ async function run() {
 					handler: deleteBlobContent
 				})
 				.command({
+					command: 'abort <id>',
+					desc: 'Abort blob processing',
+					handler: abortBlob
+				})
+				.command({
 					command: 'query [options]',
 					desc: 'Query blobs',
 					builder: yargs => {
@@ -249,6 +254,15 @@ async function run() {
 		try {
 			await client.deleteBlob({id});
 			console.log(`Deleted blob ${id}`);
+		} catch (err) {
+			handleError(err);
+		}
+	}
+
+	async function abortBlob({id}) {
+		try {
+			await client.setAborted({id});
+			console.log(`Aborted processing of blob ${id}`);
 		} catch (err) {
 			handleError(err);
 		}
