@@ -271,8 +271,17 @@ async function run() {
 	async function queryBlobs({filter}) {
 		try {
 			const query = getQuery();
-			const results = await client.getBlobs(query);
-			console.log(JSON.stringify(results, undefined, 2));
+
+			return new Promise((resolve, reject) => {
+				const emitter = client.getBlobs(query);
+
+				emitter
+					.on('error', reject)
+					.on('end', resolve)
+					.on('blobs', blobs => {
+						console.log(JSON.stringify(blobs, undefined, 2));
+					});
+			});
 		} catch (err) {
 			handleError(err);
 		}
