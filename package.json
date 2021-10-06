@@ -27,7 +27,7 @@
 		"prepublishOnly": "npm run build",
 		"lint": "eslint --fix src",
 		"test": "npm run lint",
-		"build": "babel src --source-maps --delete-dir-on-start --out-dir=dist",
+		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist",
 		"build:dev": "npm run build",
 		"watch": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'"
 	},
