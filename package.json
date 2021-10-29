@@ -24,7 +24,7 @@
 	},
 	"bin": "./dist/index.js",
 	"scripts": {
-		"prepublishOnly": "npm run build",
+		"prepare": "npm run build",
 		"lint": "eslint --fix src",
 		"test": "npm run lint",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist",

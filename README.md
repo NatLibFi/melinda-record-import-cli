@@ -27,7 +27,7 @@ Or mount the the files directly:
 $ docker run \
   --rm \
   -v /etc/localtime:/etc/localtime:ro \
-  --env-file .env 
+  --env-file .env
   -v $PWD/profile.json:/data.json:ro \
   quay.io/natlibfi/melinda-record-import-cli profiles create foo /data.json
 ```
@@ -40,6 +40,6 @@ $ node dist/index.js
 
 ## License and copyright
 
-Copyright (c) 2019 **University Of Helsinki (The National Library Of Finland)**
+Copyright (c) 2021 **University Of Helsinki (The National Library Of Finland)**
 
 This project's source code is licensed under the terms of **GNU Affero General Public License Version 3** or any later version.
