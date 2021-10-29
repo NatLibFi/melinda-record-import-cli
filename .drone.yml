@@ -53,6 +53,7 @@ steps:
 - name: npm
   image: plugins/npm
   settings:
+    registry: 'https://registry.npmjs.org/'
     token:
       from_secret: npm_token
   when:
