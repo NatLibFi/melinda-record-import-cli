@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import fs from 'fs';
 import yargs from 'yargs';
 import {getExtension as getMimeExtension} from 'mime';
