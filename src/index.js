@@ -3,7 +3,7 @@ import yargs from 'yargs';
 import {getExtension as getMimeExtension} from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
-import {ERROR as ApiError} from '@natlibfi/melinda-commons'
+import {ERROR as ApiError} from '@natlibfi/melinda-commons';
 import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
@@ -21,7 +21,7 @@ function run() {
     .on('unhandledRejection', handleInterrupt)
     .on('uncaughtException', handleInterrupt);
 
-  const args = yargs(process.argv.slice(2))
+  yargs(process.argv.slice(2))
     .scriptName('melinda-record-import-cli')
     .wrap(yargs.terminalWidth())
     .epilog('Copyright (C) 2019-2022 University Of Helsinki (The National Library Of Finland)')
@@ -149,7 +149,7 @@ function run() {
                   requiresArg: true,
                   conflicts: ['A', 'B']
                 }
-              })
+              });
           },
           handler: queryBlobs
         });
@@ -293,7 +293,7 @@ function run() {
     try {
 
       return new Promise((resolve, reject) => {
-        logger.info(`Query: ${JSON.stringify(query)}`)
+        logger.info(`Query: ${JSON.stringify(query)}`);
         const emitter = client.getBlobs(query);
 
         emitter
@@ -320,7 +320,7 @@ function run() {
         {
           name: 'modificationTime',
           value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
-        },
+        }
       ]
         .filter(param => param.value)
         .map(param => [param.name, param.value]);
@@ -332,7 +332,7 @@ function run() {
         }
 
         if (day) {
-          return [`${day}T00:00:00+01:00`, `${day}T23:59:59+01:00`]
+          return [`${day}T00:00:00+01:00`, `${day}T23:59:59+01:00`];
         }
 
         if (!after && before) {
@@ -343,7 +343,7 @@ function run() {
           return [after, '3000-01-01'];
         }
 
-        return [after, before]
+        return [after, before];
       }
 
       function testTimestamp(timestamp, acceptHours = false) {
