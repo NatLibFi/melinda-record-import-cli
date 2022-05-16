@@ -1,39 +1,11 @@
-#!/usr/bin/env node
-/**
-*
-* @licstart  The following is the entire license notice for the JavaScript code in this file.
-*
-* CLI for Melinda record batch import system
-*
-* Copyright (C) 2021 University Of Helsinki (The National Library Of Finland)
-*
-* This file is part of melinda-record-import-cli
-*
-* melinda-record-import-cli program is free software: you can redistribute it and/or modify
-* it under the terms of the GNU Affero General Public License as
-* published by the Free Software Foundation, either version 3 of the
-* License, or (at your option) any later version.
-*
-* melinda-record-import-cli is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU Affero General Public License for more details.
-*
-* You should have received a copy of the GNU Affero General Public License
-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*
-* @licend  The above is the entire license notice
-* for the JavaScript code in this file.
-*
-*/
-
 import fs from 'fs';
 import yargs from 'yargs';
 import {getExtension as getMimeExtension} from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
-import {createApiClient, ApiError} from '@natlibfi/melinda-record-import-commons';
-import {handleInterrupt} from '@natlibfi/melinda-backend-commons';
+import {ERROR as ApiError} from '@natlibfi/melinda-commons'
+import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
+import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
   API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT
 } from './config';
@@ -42,15 +14,28 @@ run();
 
 function run() {
   const client = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
+  const logger = createLogger();
 
   process
     .on('SIGINT', handleInterrupt)
     .on('unhandledRejection', handleInterrupt)
     .on('uncaughtException', handleInterrupt);
 
-  yargs
+  const args = yargs(process.argv.slice(2))
+    .scriptName('melinda-record-import-cli')
     .wrap(yargs.terminalWidth())
-    .scriptName('melinda-record-import')
+    .epilog('Copyright (C) 2019-2022 University Of Helsinki (The National Library Of Finland)')
+    .usage('Installed globally: $0 <environment> <operation> [options] and env variable info in README')
+    .usage('Not installed: npx $0 <environment> <operation> [options] and env variable info in README')
+    .usage('Build from source: node dist/index.js <environment> <operation> [options] and env variable info in README')
+    .showHelpOnFail(true)
+    .example([
+      ['$ $0 profiles create <id> [file]'],
+      ['$ $0 blobs create [file] -p <id> -t <file contentType>'],
+      ['$ $0 blobs query -s transformed'],
+      ['$ $0 blobs query -a 2022-05-12 -b 2022-05-13']
+    ])
+    .env('RECORD_IMPORT')
     .demandCommand(1)
     .command('profiles', 'Operate on profiles', yargs => {
       yargs
@@ -85,15 +70,9 @@ function run() {
           desc: 'Create a blob',
           builder: yargs => {
             yargs
-              .option('profile', {
-                alias: 'p',
-                demandOption: true,
-                requiresArg: true
-              })
-              .option('contentType', {
-                alias: 't',
-                demandOption: true,
-                requiresArg: true
+              .options({
+                'p': {alias: 'profile', demandOption: true, requiresArg: true},
+                't': {alias: 'contentType', demandOption: true, requiresArg: true}
               });
           },
           handler: createBlob
@@ -125,14 +104,52 @@ function run() {
         })
         .command({
           command: 'query [options]',
-          desc: 'Query blobs',
+          desc: `Query blobs:\n - States: ${Object.values(BLOB_STATE)}\n - Timestamp formats for options: YYYY-MM-DD or YYYY-MM-DDThh:mm:ss±hh`,
           builder: yargs => {
             yargs
-              .option('filter', {
-                alias: 'f',
-                describe: 'Query filter',
-                requiresArg: true
-              });
+              .options({
+                's': {
+                  alias: 'state',
+                  describe: 'Query blobs by state',
+                  requiresArg: true
+                },
+                'b': {
+                  alias: 'createdBefore',
+                  describe: 'Query blobs created before time',
+                  requiresArg: true,
+                  conflicts: ['d']
+                },
+                'a': {
+                  alias: 'createdAfter',
+                  describe: 'Query blobs created after time',
+                  requiresArg: true,
+                  conflicts: ['d']
+                },
+                'B': {
+                  alias: 'modifiedBefore',
+                  describe: 'Query blobs modified before time',
+                  requiresArg: true,
+                  conflicts: ['D']
+                },
+                'A': {
+                  alias: 'modifiedAfter',
+                  describe: 'Query blobs modified after time',
+                  requiresArg: true,
+                  conflicts: ['D']
+                },
+                'd': {
+                  alias: 'createdDay',
+                  describe: 'Query blobs created by day',
+                  requiresArg: true,
+                  conflicts: ['a', 'b']
+                },
+                'D': {
+                  alias: 'modifiedDay',
+                  describe: 'Query blobs modified by day',
+                  requiresArg: true,
+                  conflicts: ['A', 'B']
+                }
+              })
           },
           handler: queryBlobs
         });
@@ -144,7 +161,7 @@ function run() {
     try {
       const payload = JSON.parse(await readData(file));
       await client.modifyProfile({id, payload});
-      console.log(`Created/updated profile ${id}`); //eslint-disable-line no-console
+      logger.info(`Created/updated profile ${id}`);
     } catch (err) {
       handleError(err);
     }
@@ -153,7 +170,7 @@ function run() {
   async function queryProfiles() {
     try {
       const results = await client.queryProfiles();
-      console.log(JSON.stringify(results, undefined, 2)); //eslint-disable-line no-console
+      logger.info(JSON.stringify(results, undefined, 2));
     } catch (err) {
       handleError(err);
     }
@@ -162,7 +179,7 @@ function run() {
   async function readProfile({id}) {
     try {
       const result = await client.getProfile({id});
-      console.log(JSON.stringify(result, undefined, 2)); //eslint-disable-line no-console
+      logger.info(JSON.stringify(result, undefined, 2));
     } catch (err) {
       handleError(err);
     }
@@ -171,7 +188,7 @@ function run() {
   async function deleteProfile({id}) {
     try {
       await client.deleteProfile({id});
-      console.log(`Deleted profile ${id}`); //eslint-disable-line no-console
+      logger.info(`Deleted profile ${id}`);
     } catch (err) {
       handleError(err);
     }
@@ -184,7 +201,7 @@ function run() {
         blob: fs.existsSync(file) ? fs.createReadStream(file) : process.stdin
       });
 
-      console.log(`Created a new blob ${id}`); //eslint-disable-line no-console
+      logger.info(`Created a new blob ${id}`);
     } catch (err) {
       handleError(err);
     }
@@ -193,7 +210,7 @@ function run() {
   async function readBlob({id}) {
     try {
       const result = await client.getBlobMetadata({id});
-      console.log(JSON.stringify(format(result), undefined, 2)); //eslint-disable-line no-console
+      logger.info(JSON.stringify(format(result), undefined, 2));
     } catch (err) {
       handleError(err);
     }
@@ -222,7 +239,7 @@ function run() {
             });
         });
 
-        console.log(`Wrote blob content to file ${file}`); //eslint-disable-line no-console
+        logger.info(`Wrote blob content to file ${file}`);
         return;
       }
 
@@ -237,7 +254,7 @@ function run() {
         return;
       }
 
-      console.error(`Content type ${contentType} seems to be binary. Refusing to print to console`); //eslint-disable-line no-console
+      logger.error(`Content type ${contentType} seems to be binary. Refusing to print to console`);
       throw new Error('Unexpected read content error');
     } catch (err) {
       handleError(err);
@@ -247,7 +264,7 @@ function run() {
   async function deleteBlobContent({id}) {
     try {
       await client.deleteBlobContent({id});
-      console.log(`Deleted content for blob ${id}`); //eslint-disable-line no-console
+      logger.info(`Deleted content for blob ${id}`);
     } catch (err) {
       handleError(err);
     }
@@ -256,7 +273,7 @@ function run() {
   async function deleteBlob({id}) {
     try {
       await client.deleteBlob({id});
-      console.log(`Deleted blob ${id}`); //eslint-disable-line no-console
+      logger.info(`Deleted blob ${id}`);
     } catch (err) {
       handleError(err);
     }
@@ -265,17 +282,18 @@ function run() {
   async function abortBlob({id}) {
     try {
       await client.setAborted({id});
-      console.log(`Aborted processing of blob ${id}`); //eslint-disable-line no-console
+      logger.info(`Aborted processing of blob ${id}`);
     } catch (err) {
       handleError(err);
     }
   }
 
-  function queryBlobs({filter}) {
+  function queryBlobs({state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay}) {
+    const query = getQuery();
     try {
-      const query = getQuery();
 
       return new Promise((resolve, reject) => {
+        logger.info(`Query: ${JSON.stringify(query)}`)
         const emitter = client.getBlobs(query);
 
         emitter
@@ -290,30 +308,76 @@ function run() {
     }
 
     function getQuery() {
-      if (filter) {
-        return (Array.isArray(filter) ? filter : [filter])
-          .reduce((acc, arg) => {
-            const [key, value] = arg.split(/=/u); // eslint-disable-line no-div-regex
+      const queriesArray = [
+        {
+          name: 'state',
+          value: testBlobState(state) ? state : false
+        },
+        {
+          name: 'creationTime',
+          value: createTimeStampValue(testTimestamp(createdAfter, true), testTimestamp(createdBefore, true), testTimestamp(createdDay))
+        },
+        {
+          name: 'modificationTime',
+          value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
+        },
+      ]
+        .filter(param => param.value)
+        .map(param => [param.name, param.value]);
+      return Object.fromEntries(queriesArray);
 
-            // Multiple values to arrays
-            if ([key] in acc) {
-              return {...acc, [key]: [].concat(acc[key], value)};
-            }
+      function createTimeStampValue(after, before, day) {
+        if (!after && !before && !day) {
+          return false;
+        }
 
-            return {...acc, [key]: value};
-          }, {});
+        if (day) {
+          return [`${day}T00:00:00+01:00`, `${day}T23:59:59+01:00`]
+        }
+
+        if (!after && before) {
+          return ['1990-01-01', before];
+        }
+
+        if (after && !before) {
+          return [after, '3000-01-01'];
+        }
+
+        return [after, before]
       }
 
-      return {};
+      function testTimestamp(timestamp, acceptHours = false) {
+        if (timestamp === undefined) {
+          return false;
+        }
+
+        if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
+          return moment(timestamp).utc();
+        }
+
+        if ((/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}$/u).test(timestamp)) {
+          return timestamp;
+        }
+
+        return false;
+      }
+
+      function testBlobState(state = false) {
+        if (state) {
+          return BLOB_STATE[state.toUpperCase()] !== undefined;
+        }
+
+        return false;
+      }
     }
   }
 
   function handleError(err) {
     if (err instanceof ApiError) {
-      return console.error(`API call failed: ${HttpStatus[`${err.status}_MESSAGE`]} (${err.status})`); //eslint-disable-line no-console
+      return logger.error(`API call failed: ${HttpStatus[`${err.status}_MESSAGE`]} (${err.status})`);
     }
 
-    console.error(`Unexpected error: ${'stack' in err ? err.stack : err}`); //eslint-disable-line no-console
+    logger.error(`Unexpected error: ${'stack' in err ? err.stack : err}`);
     throw new Error('Unexpected handle error');
   }
 
