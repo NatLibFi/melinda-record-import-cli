@@ -5,17 +5,17 @@ import yargs from 'yargs';
 import {getExtension as getMimeExtension} from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
-import {ERROR as ApiError} from '@natlibfi/melinda-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
-  API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT
+  recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent
 } from './config';
 
 run();
 
 function run() {
-  const client = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
+  const client = createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent});
   const logger = createLogger();
 
   process
@@ -181,7 +181,9 @@ function run() {
   async function readProfile({id}) {
     try {
       const result = await client.getProfile({id});
-      logger.info(JSON.stringify(result, undefined, 2));
+      // Use console.log coz logger starts print with date and type
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(result, undefined, 2));
     } catch (err) {
       handleError(err);
     }
@@ -197,10 +199,15 @@ function run() {
   }
 
   async function createBlob({profile, contentType, file}) {
+    if (file === undefined) {
+      throw new Error('File parametter missing for creating blob');
+    }
+
     try {
+
       const id = await client.createBlob({
         profile, type: contentType,
-        blob: fs.existsSync(file) ? fs.createReadStream(file) : process.stdin
+        blob: fs.existsSync(file) ? fs.createReadStream(file, {encoding: 'UTF-8'}) : process.stdin
       });
 
       logger.info(`Created a new blob ${id}`);
@@ -212,7 +219,9 @@ function run() {
   async function readBlob({id}) {
     try {
       const result = await client.getBlobMetadata({id});
-      logger.info(JSON.stringify(format(result), undefined, 2));
+      // Use console.log coz logger starts print with date and type
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(format(result), undefined, 2));
     } catch (err) {
       handleError(err);
     }
@@ -227,6 +236,7 @@ function run() {
   async function readBlobContent({id, file}) {
     try {
       const {contentType, readStream} = await client.getBlobContent({id});
+      const chunks = [];
 
       if (file) {
         const writeStream = fs.createWriteStream(file);
@@ -234,8 +244,9 @@ function run() {
         await new Promise((resolve, reject) => {
           readStream
             .on('error', reject)
-            .on('data', chunk => writeStream.write(chunk))
+            .on('data', chunk => chunks.push(chunk))
             .on('end', () => {
+              chunks.forEach(chunk => writeStream.write(chunk));
               writeStream.end();
               resolve();
             });
@@ -250,8 +261,11 @@ function run() {
           readStream
             .setEncoding('utf8')
             .on('error', reject)
-            .on('data', chunk => console.log(chunk)) //eslint-disable-line no-console
-            .on('end', resolve);
+            .on('data', chunk => chunks.push(chunk)) //eslint-disable-line no-console
+            .on('end', () => {
+              console.log(chunks.join(''));
+              resolve();
+            });
         });
         return;
       }
@@ -302,6 +316,8 @@ function run() {
           .on('error', reject)
           .on('end', resolve)
           .on('blobs', blobs => {
+            // Use console.log coz logger starts print with date and type
+            // eslint-disable-next-line no-console
             console.log(JSON.stringify(blobs, undefined, 2)); //eslint-disable-line no-console
           });
       });
@@ -379,8 +395,7 @@ function run() {
       return logger.error(`API call failed: ${HttpStatus[`${err.status}_MESSAGE`]} (${err.status})`);
     }
 
-    logger.error(`Unexpected error: ${'stack' in err ? err.stack : err}`);
-    throw new Error('Unexpected handle error');
+    throw new Error(`Unexpected handle error: ${'stack' in err ? err.stack : err}`);
   }
 
   function readData(filename) {
