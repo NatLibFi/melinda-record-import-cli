@@ -204,7 +204,6 @@ function run() {
     }
 
     try {
-
       const id = await client.createBlob({
         profile, type: contentType,
         blob: fs.existsSync(file) ? fs.createReadStream(file, {encoding: 'UTF-8'}) : process.stdin
@@ -244,7 +243,7 @@ function run() {
         await new Promise((resolve, reject) => {
           readStream
             .on('error', reject)
-            .on('data', chunk => chunks.push(chunk))
+            .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
             .on('end', () => {
               chunks.forEach(chunk => writeStream.write(chunk));
               writeStream.end();
@@ -261,9 +260,9 @@ function run() {
           readStream
             .setEncoding('utf8')
             .on('error', reject)
-            .on('data', chunk => chunks.push(chunk)) //eslint-disable-line no-console
+            .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
             .on('end', () => {
-              console.log(chunks.join(''));
+              console.log(chunks.join('')); // eslint-disable-line no-console
               resolve();
             });
         });
