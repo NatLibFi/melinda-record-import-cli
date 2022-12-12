@@ -160,7 +160,7 @@ function run() {
     .parse();
 
   async function modifyProfile({id, file}) {
-    if (file === undefined && !fs.existsSync(file)) {
+    if (file === undefined && !fs.accessSync(file, fs.constants.R_OK)) {
       throw new Error('File parametter missing for creating/modifying blob');
     }
 
@@ -203,14 +203,14 @@ function run() {
   }
 
   async function createBlob({profile, contentType, file}) {
-    if (file === undefined && !fs.existsSync(file)) {
+    if (file === undefined && !fs.accessSync(file, fs.constants.R_OK)) {
       throw new Error('File parametter missing for creating blob');
     }
 
     try {
       const id = await client.createBlob({
         profile, type: contentType,
-        blob: fs.existsSync(file) ? fs.createReadStream(file, {encoding: 'UTF-8'}) : process.stdin
+        blob: fs.accessSync(file, fs.constants.R_OK) ? fs.createReadStream(file, {encoding: 'UTF-8'}) : process.stdin
       });
 
       logger.info(`Created a new blob ${id}`);
