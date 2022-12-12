@@ -160,6 +160,10 @@ function run() {
     .parse();
 
   async function modifyProfile({id, file}) {
+    if (file === undefined && !fs.existsSync(file)) {
+      throw new Error('File parametter missing for creating/modifying blob');
+    }
+
     try {
       const payload = JSON.parse(await readData(file));
       await client.modifyProfile({id, payload});
@@ -199,7 +203,7 @@ function run() {
   }
 
   async function createBlob({profile, contentType, file}) {
-    if (file === undefined) {
+    if (file === undefined && !fs.existsSync(file)) {
       throw new Error('File parametter missing for creating blob');
     }
 
