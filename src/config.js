@@ -28,7 +28,7 @@
 
 import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 
-export const API_URL = readEnvironmentVariable('API_URL');
-export const API_USERNAME = readEnvironmentVariable('API_USERNAME');
-export const API_PASSWORD = readEnvironmentVariable('API_PASSWORD');
-export const API_CLIENT_USER_AGENT = readEnvironmentVariable('API_CLIENT_USER_AGENT', {defaultValue: 'Record import CLI'});
+export const recordImportApiUrl = readEnvironmentVariable('API_URL');
+export const recordImportApiUsername = readEnvironmentVariable('API_USERNAME');
+export const recordImportApiPassword = readEnvironmentVariable('API_PASSWORD');
+export const userAgent = readEnvironmentVariable('API_CLIENT_USER_AGENT', {defaultValue: 'Record import CLI'});
