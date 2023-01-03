@@ -14,16 +14,17 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-cli.git"
 	},
 	"license": "mit",
-	"version": "2.1.0",
+	"version": "3.0.0-alpha.1",
 	"main": "./dist/index.js",
 	"engines": {
-		"node": ">=14"
+		"node": ">=18"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"bin": "./dist/index.js",
 	"scripts": {
+		"prepare": "npm run build",
 		"lint": "eslint --fix src",
 		"test": "npm run lint",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist",
@@ -45,10 +46,8 @@
 		"@babel/core": "^7.16.0",
 		"@babel/eslint-parser": "^7.16.0",
 		"@babel/node": "^7.16.0",
-		"@babel/plugin-syntax-dynamic-import": "^7.8.3",
 		"@babel/preset-env": "^7.16.0",
 		"@natlibfi/eslint-config-melinda-backend": "^1.1.1",
-		"babel-plugin-dynamic-import-node": "^2.3.3",
 		"cross-env": "^7.0.3",
 		"eslint": "^7.32.0",
 		"nodemon": "^2.0.14"
@@ -64,15 +63,9 @@
 			[
 				"@babel/preset-env",
 				{
-					"targets": {
-						"node": "14"
-					}
+					"targets": "maintained node versions"
 				}
 			]
-		],
-		"plugins": [
-			"@babel/plugin-syntax-dynamic-import",
-			"dynamic-import-node"
 		]
 	}
 }
