@@ -207,10 +207,14 @@ function run() {
       throw new Error('File parametter missing for creating blob');
     }
 
+    logger.debug('File access OK');
+    logger.debug(`Profile parametter: ${profile !== undefined}`);
+    logger.debug(`ContentType parametter: ${contentType !== undefined}`);
+
     try {
       const id = await client.createBlob({
         profile, type: contentType,
-        blob: fs.accessSync(file, fs.constants.R_OK) ? fs.createReadStream(file, {encoding: 'UTF-8'}) : process.stdin
+        blob: fs.createReadStream(file, {encoding: 'UTF-8'})
       });
 
       logger.info(`Created a new blob ${id}`);
