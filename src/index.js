@@ -26,7 +26,7 @@ function run() {
   yargs(process.argv.slice(2))
     .scriptName('melinda-record-import-cli')
     .wrap(yargs.terminalWidth())
-    .epilog('Copyright (C) 2019-2022 University Of Helsinki (The National Library Of Finland)')
+    .epilog('Copyright (C) 2019-2023 University Of Helsinki (The National Library Of Finland)')
     .usage('Installed globally: $0 <environment> <operation> [options] and env variable info in README')
     .usage('Not installed: npx $0 <environment> <operation> [options] and env variable info in README')
     .usage('Build from source: node dist/index.js <environment> <operation> [options] and env variable info in README')
@@ -37,6 +37,7 @@ function run() {
       ['$ $0 blobs query -s transformed'],
       ['$ $0 blobs query -a 2022-05-12 -b 2022-05-13']
     ])
+    .version()
     .env('RECORD_IMPORT')
     .demandCommand(1)
     .command('profiles', 'Operate on profiles', yargs => {
