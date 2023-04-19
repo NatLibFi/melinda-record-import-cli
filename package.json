@@ -34,7 +34,7 @@
 	"dependencies": {
 		"@babel/runtime": "^7.21.0",
 		"@natlibfi/melinda-backend-commons": "^2.1.0",
-		"@natlibfi/melinda-commons": "^13.0.2",
+		"@natlibfi/melinda-commons": "^13.0.4",
 		"@natlibfi/melinda-record-import-commons": "^10.1.5",
 		"http-status": "^1.6.2",
 		"mime": "^3.0.0",
