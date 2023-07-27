@@ -14,7 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-cli.git"
 	},
 	"license": "mit",
-	"version": "3.0.2",
+	"version": "3.0.3-alpha.3",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
@@ -32,25 +32,25 @@
 		"watch": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'"
 	},
 	"dependencies": {
-		"@babel/runtime": "^7.21.0",
-		"@natlibfi/melinda-backend-commons": "^2.1.0",
-		"@natlibfi/melinda-commons": "^13.0.4",
-		"@natlibfi/melinda-record-import-commons": "^10.1.5",
+		"@babel/runtime": "^7.22.6",
+		"@natlibfi/melinda-backend-commons": "^2.2.1",
+		"@natlibfi/melinda-commons": "^13.0.5",
+		"@natlibfi/melinda-record-import-commons": "^10.1.6",
 		"http-status": "^1.6.2",
 		"mime": "^3.0.0",
 		"moment": "^2.29.4",
-		"yargs": "^17.7.1"
+		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.21.0",
-		"@babel/core": "^7.21.3",
-		"@babel/eslint-parser": "^7.21.3",
-		"@babel/node": "^7.20.7",
-		"@babel/preset-env": "^7.20.2",
-		"@natlibfi/eslint-config-melinda-backend": "^2.0.2",
+		"@babel/cli": "^7.22.9",
+		"@babel/core": "^7.22.9",
+		"@babel/eslint-parser": "^7.22.9",
+		"@babel/node": "^7.22.6",
+		"@babel/preset-env": "^7.22.9",
+		"@natlibfi/eslint-config-melinda-backend": "^3.0.0",
 		"cross-env": "^7.0.3",
-		"eslint": "^8.36.0",
-		"nodemon": "^2.0.22"
+		"eslint": "^8.45.0",
+		"nodemon": "^3.0.1"
 	},
 	"eslintConfig": {
 		"parser": "@babel/eslint-parser",
