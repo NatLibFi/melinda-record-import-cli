@@ -32,21 +32,21 @@
 		"watch": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'"
 	},
 	"dependencies": {
-		"@babel/runtime": "^7.22.11",
+		"@babel/runtime": "^7.22.15",
 		"@natlibfi/melinda-backend-commons": "^2.2.1",
 		"@natlibfi/melinda-commons": "^13.0.6",
 		"@natlibfi/melinda-record-import-commons": "^10.1.8-alpha.1",
-		"http-status": "^1.6.2",
+		"http-status": "^1.7.0",
 		"mime": "^3.0.0",
 		"moment": "^2.29.4",
 		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.22.10",
-		"@babel/core": "^7.22.11",
-		"@babel/eslint-parser": "^7.22.11",
-		"@babel/node": "^7.22.10",
-		"@babel/preset-env": "^7.22.14",
+		"@babel/cli": "^7.22.15",
+		"@babel/core": "^7.22.15",
+		"@babel/eslint-parser": "^7.22.15",
+		"@babel/node": "^7.22.15",
+		"@babel/preset-env": "^7.22.15",
 		"@natlibfi/eslint-config-melinda-backend": "^3.0.1",
 		"cross-env": "^7.0.3",
 		"eslint": "^8.48.0",
