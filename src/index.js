@@ -9,13 +9,13 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
-  recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent
+  recordImportApiOptions, keycloakOptions
 } from './config';
 
 run();
 
-function run() {
-  const client = createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent});
+async function run() {
+  const client = await createApiClient(recordImportApiOptions, keycloakOptions);
   const logger = createLogger();
 
   process
@@ -254,7 +254,8 @@ function run() {
             .on('error', reject)
             .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
             .on('end', () => {
-              chunks.forEach(chunk => writeStream.write(chunk));
+              writeStream.write(JSON.stringify(chunks.join('')));
+              // chunks.forEach(chunk => writeStream.write(chunk));
               writeStream.end();
               resolve();
             });
