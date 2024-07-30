@@ -224,7 +224,7 @@ async function run() {
     } catch (err) {
       handleError(err);
     } finally {
-      if (mongoOperator) {
+      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
         mongoOperator.closeClient();
       }
     }
@@ -245,7 +245,7 @@ async function run() {
     } catch (err) {
       handleError(err);
     } finally {
-      if (mongoOperator) {
+      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
         mongoOperator.closeClient();
       }
     }
@@ -318,7 +318,7 @@ async function run() {
     } catch (err) {
       handleError(err);
     } finally {
-      if (mongoOperator) {
+      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
         mongoOperator.closeClient();
       }
     }
@@ -331,7 +331,7 @@ async function run() {
     } catch (err) {
       handleError(err);
     } finally {
-      if (mongoOperator) {
+      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
         mongoOperator.closeClient();
       }
     }
@@ -358,7 +358,7 @@ async function run() {
     } catch (err) {
       handleError(err);
     } finally {
-      if (mongoOperator) {
+      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
         mongoOperator.closeClient();
       }
     }
