@@ -2,20 +2,21 @@
 
 import fs from 'fs';
 import yargs from 'yargs';
-import {getExtension as getMimeExtension} from 'mime';
+import mime from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
+import {createApiClient, BLOB_STATE, createMongoOperator} from '@natlibfi/melinda-record-import-commons';
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
-  recordImportApiOptions, keycloakOptions
+  recordImportApiOptions, keycloakOptions, mongoUrl
 } from './config';
 
 run();
 
 async function run() {
-  const client = await createApiClient(recordImportApiOptions, keycloakOptions);
+  const mongoOperator = mongoUrl ? await createMongoOperator(mongoUrl) : false;
+  const client = await createApiClient(recordImportApiOptions, keycloakOptions, mongoOperator);
   const logger = createLogger();
 
   process
@@ -23,7 +24,7 @@ async function run() {
     .on('unhandledRejection', handleInterrupt)
     .on('uncaughtException', handleInterrupt);
 
-  yargs(process.argv.slice(2))
+  await yargs(process.argv.slice(2))
     .scriptName('melinda-record-import-cli')
     .wrap(yargs.terminalWidth())
     .epilog('Copyright (C) 2019-2023 University Of Helsinki (The National Library Of Finland)')
@@ -219,8 +220,13 @@ async function run() {
       });
 
       logger.info(`Created a new blob ${id}`);
+      return;
     } catch (err) {
       handleError(err);
+    } finally {
+      if (mongoOperator) {
+        mongoOperator.closeClient();
+      }
     }
   }
 
@@ -228,10 +234,20 @@ async function run() {
     try {
       const result = await client.getBlobMetadata({id});
       // Use console.log coz logger starts print with date and type
+      if (result) {
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify(format(result), undefined, 2));
+        return;
+      }
       // eslint-disable-next-line no-console
-      console.log(JSON.stringify(format(result), undefined, 2));
+      console.log('404 Blob not found!');
+      return;
     } catch (err) {
       handleError(err);
+    } finally {
+      if (mongoOperator) {
+        mongoOperator.closeClient();
+      }
     }
 
     function format(metadata) {
@@ -265,7 +281,7 @@ async function run() {
         return;
       }
 
-      if (getMimeExtension(contentType) === 'bin' || !process.stdout.isTTY) {
+      if (mime.getExtension(contentType) === 'bin' || !process.stdout.isTTY) {
         await new Promise((resolve, reject) => {
           readStream
             .setEncoding('utf8')
@@ -301,6 +317,10 @@ async function run() {
       logger.info(`Deleted blob ${id}`);
     } catch (err) {
       handleError(err);
+    } finally {
+      if (mongoOperator) {
+        mongoOperator.closeClient();
+      }
     }
   }
 
@@ -310,6 +330,10 @@ async function run() {
       logger.info(`Aborted processing of blob ${id}`);
     } catch (err) {
       handleError(err);
+    } finally {
+      if (mongoOperator) {
+        mongoOperator.closeClient();
+      }
     }
   }
 
@@ -326,12 +350,23 @@ async function run() {
           .on('end', resolve)
           .on('blobs', blobs => {
             // Use console.log coz logger starts print with date and type
+            const formatedBlobs = blobs.map(blob => format(blob));
             // eslint-disable-next-line no-console
-            console.log(JSON.stringify(blobs, undefined, 2)); //eslint-disable-line no-console
+            console.log(JSON.stringify(formatedBlobs, undefined, 2)); //eslint-disable-line no-console
           });
       });
     } catch (err) {
       handleError(err);
+    } finally {
+      if (mongoOperator) {
+        mongoOperator.closeClient();
+      }
+    }
+
+    function format(metadata) {
+      metadata.modificationTime = moment(metadata.modificationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+      metadata.creationTime = moment(metadata.creationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+      return metadata;
     }
 
     function getQuery() {
