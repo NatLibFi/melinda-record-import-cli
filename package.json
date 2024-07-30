@@ -35,7 +35,7 @@
 		"@babel/runtime": "^7.23.6",
 		"@natlibfi/melinda-backend-commons": "^2.3.1-alpha.3",
 		"@natlibfi/melinda-commons": "^13.0.15",
-		"@natlibfi/melinda-record-import-commons": "^11.0.0-alpha.41",
+		"@natlibfi/melinda-record-import-commons": "^11.0.0-alpha.42",
 		"http-status": "^1.7.4",
 		"mime": "^3.0.0",
 		"moment": "^2.29.4",
