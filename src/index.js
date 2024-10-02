@@ -161,6 +161,7 @@ async function run() {
     .demandCommand(1)
     .parse();
 
+  // MARK: Create/Modify Profile
   async function modifyProfile({id, file}) {
     if (file === undefined && !fs.accessSync(file, fs.constants.R_OK)) {
       throw new Error('File parametter missing for creating/modifying blob');
@@ -175,6 +176,7 @@ async function run() {
     }
   }
 
+  // MARK: Query Profiles
   async function queryProfiles() {
     try {
       const results = await client.queryProfiles();
@@ -184,6 +186,7 @@ async function run() {
     }
   }
 
+  // MARK: Read Profile
   async function readProfile({id}) {
     try {
       const result = await client.getProfile({id});
@@ -195,6 +198,7 @@ async function run() {
     }
   }
 
+  // MARK: Delete Profile
   async function deleteProfile({id}) {
     try {
       await client.deleteProfile({id});
@@ -204,6 +208,7 @@ async function run() {
     }
   }
 
+  // MARK: Create Blob
   async function createBlob({profile, contentType, file}) {
     if (file === undefined && !fs.accessSync(file, fs.constants.R_OK)) {
       throw new Error('File parametter missing for creating blob');
@@ -230,6 +235,7 @@ async function run() {
     }
   }
 
+  // MARK: Read Blob
   async function readBlob({id}) {
     try {
       const result = await client.getBlobMetadata({id});
@@ -257,6 +263,7 @@ async function run() {
     }
   }
 
+  // MARK: Read Blob Content
   async function readBlobContent({id, file}) {
     try {
       const {contentType, readStream} = await client.getBlobContent({id});
@@ -302,6 +309,7 @@ async function run() {
     }
   }
 
+  // MARK: Delete Blob Content
   async function deleteBlobContent({id}) {
     try {
       await client.deleteBlobContent({id});
@@ -311,6 +319,7 @@ async function run() {
     }
   }
 
+  // MARK: Delete Blob
   async function deleteBlob({id}) {
     try {
       await client.deleteBlob({id});
@@ -324,6 +333,7 @@ async function run() {
     }
   }
 
+  // MARK: Abort Blob
   async function abortBlob({id}) {
     try {
       await client.setAborted({id});
@@ -337,6 +347,7 @@ async function run() {
     }
   }
 
+  // MARK: Query Blobs
   function queryBlobs({state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay}) {
     const query = getQuery();
     try {
@@ -394,18 +405,18 @@ async function run() {
         }
 
         if (day) {
-          return [`${day}T00:00:00+01:00`, `${day}T23:59:59+01:00`];
+          return `${day}T00:00:00+01:00,${day}T23:59:59+01:00`;
         }
 
         if (!after && before) {
-          return ['1990-01-01', before];
+          return `1990-01-01,${before}`;
         }
 
         if (after && !before) {
-          return [after, '3000-01-01'];
+          return `${after},3000-01-01`;
         }
 
-        return [after, before];
+        return `${after},${before}`;
       }
 
       function testTimestamp(timestamp, acceptHours = false) {
@@ -413,8 +424,11 @@ async function run() {
           return false;
         }
 
-        if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
-          return moment(timestamp).utc();
+        //if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
+        if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}/u).test(timestamp)) {
+          const sliced = timestamp.slice(0, 19);
+          console.log(sliced); // eslint-disable-line
+          return moment(sliced).utc().toISOString();
         }
 
         if ((/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}$/u).test(timestamp)) {
@@ -434,6 +448,7 @@ async function run() {
     }
   }
 
+  // MARK: Handle Error
   function handleError(err) {
     if (err instanceof ApiError) {
       return logger.error(`API call failed: ${HttpStatus[`${err.status}_MESSAGE`]} (${err.status})`);
@@ -442,6 +457,7 @@ async function run() {
     throw new Error(`Unexpected handle error: ${'stack' in err ? err.stack : err}`);
   }
 
+  // MARK: Read data
   function readData(filename) {
     if (filename) {
       return fs.readFileSync(filename, 'utf8');
