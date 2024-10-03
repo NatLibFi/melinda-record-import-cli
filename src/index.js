@@ -167,7 +167,11 @@ async function run() {
                   requiresArg: true
                 },
                 'limit': {
-                  describe: 'Query blobs and limit received records to n',
+                  describe: 'Query blobs and limit received records to n (Does not work atm. Commons api client automaticaly gets all)',
+                  requiresArg: true
+                },
+                'getAll': {
+                  describe: 'Receive all records for query (1 or 0) (Does not work atm. Commons api client automaticaly gets all)',
                   requiresArg: true
                 },
               });
@@ -365,7 +369,7 @@ async function run() {
   }
 
   // MARK: Query Blobs
-  function queryBlobs({profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit}) {
+  function queryBlobs({profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}) {
     const query = getQuery();
     try {
 
@@ -416,17 +420,37 @@ async function run() {
           value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
         },
         {
-          name: 'skip',
+          name: 'offset',
           value: skip === undefined ? false : skip
         },
         {
           name: 'limit',
           value: limit === undefined ? false : limit
+        },
+        {
+          name: 'getAll',
+          value: handleGetAll(getAll, limit)
         }
       ]
         .filter(param => param.value)
         .map(param => [param.name, param.value]);
       return Object.fromEntries(queriesArray);
+
+      function handleGetAll(getAll = undefined, limit = false) {
+        if (limit && getAll === undefined) {
+          return '0';
+        }
+
+        if (getAll === '0') {
+          return '0';
+        }
+
+        if (getAll === undefined) {
+          return false;
+        }
+
+        return '1';
+      }
 
       function createTimeStampValue(after, before, day) {
         if (!after && !before && !day) {
