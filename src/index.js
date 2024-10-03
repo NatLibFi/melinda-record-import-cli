@@ -108,13 +108,22 @@ async function run() {
         })
         .command({
           command: 'query [options]',
-          desc: `Query blobs:\n - States: ${Object.values(BLOB_STATE)}\n - Timestamp formats for options: YYYY-MM-DD or YYYY-MM-DDThh:mm:ss±hh`,
+          desc: `Query blobs:
+           - Profile when interested on multiple use , reparator
+           - State when interested on multiple use , reparator
+           - States available: ${Object.values(BLOB_STATE)}
+           - Timestamp formats for options: YYYY-MM-DD or YYYY-MM-DDThh:mm:ss±hh`,
           builder: yargs => {
             yargs
               .options({
+                'p': {
+                  alias: 'profile',
+                  describe: 'Query blobs by profile(s) e.g. profile or progile1,profile2',
+                  requiresArg: true
+                },
                 's': {
                   alias: 'state',
-                  describe: 'Query blobs by state',
+                  describe: 'Query blobs by state(s) e.g. STATE or STATE1,STATE2',
                   requiresArg: true
                 },
                 'b': {
@@ -152,7 +161,15 @@ async function run() {
                   describe: 'Query blobs modified by day',
                   requiresArg: true,
                   conflicts: ['A', 'B']
-                }
+                },
+                'skip': {
+                  describe: 'Query blobs and skip n records',
+                  requiresArg: true
+                },
+                'limit': {
+                  describe: 'Query blobs and limit received records to n',
+                  requiresArg: true
+                },
               });
           },
           handler: queryBlobs
@@ -348,7 +365,7 @@ async function run() {
   }
 
   // MARK: Query Blobs
-  function queryBlobs({state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay}) {
+  function queryBlobs({profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit}) {
     const query = getQuery();
     try {
 
@@ -383,6 +400,10 @@ async function run() {
     function getQuery() {
       const queriesArray = [
         {
+          name: 'profile',
+          value: profile === undefined ? false : profile
+        },
+        {
           name: 'state',
           value: testBlobState(state) ? state : false
         },
@@ -393,6 +414,14 @@ async function run() {
         {
           name: 'modificationTime',
           value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
+        },
+        {
+          name: 'skip',
+          value: skip === undefined ? false : skip
+        },
+        {
+          name: 'limit',
+          value: limit === undefined ? false : limit
         }
       ]
         .filter(param => param.value)
