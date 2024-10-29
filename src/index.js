@@ -6,17 +6,16 @@ import mime from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {createApiClient, BLOB_STATE, createMongoOperator} from '@natlibfi/melinda-record-import-commons';
+import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
-  recordImportApiOptions, keycloakOptions, mongoUrl
+  recordImportApiOptions, keycloakOptions
 } from './config';
 
 run();
 
 async function run() {
-  const mongoOperator = mongoUrl ? await createMongoOperator(mongoUrl) : false;
-  const client = await createApiClient(recordImportApiOptions, keycloakOptions, mongoOperator);
+  const client = await createApiClient(recordImportApiOptions, keycloakOptions);
   const logger = createLogger();
 
   process
@@ -249,10 +248,6 @@ async function run() {
       return;
     } catch (err) {
       handleError(err);
-    } finally {
-      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
-        mongoOperator.closeClient();
-      }
     }
   }
 
@@ -271,10 +266,6 @@ async function run() {
       return;
     } catch (err) {
       handleError(err);
-    } finally {
-      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
-        mongoOperator.closeClient();
-      }
     }
 
     function format(metadata) {
@@ -347,10 +338,6 @@ async function run() {
       logger.info(`Deleted blob ${id}`);
     } catch (err) {
       handleError(err);
-    } finally {
-      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
-        mongoOperator.closeClient();
-      }
     }
   }
 
@@ -361,16 +348,13 @@ async function run() {
       logger.info(`Aborted processing of blob ${id}`);
     } catch (err) {
       handleError(err);
-    } finally {
-      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
-        mongoOperator.closeClient();
-      }
     }
   }
 
   // MARK: Query Blobs
-  function queryBlobs({profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}) {
-    const query = getQuery();
+  // {profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}
+  function queryBlobs(query) {
+    const query = getQuery(query);
     try {
 
       return new Promise((resolve, reject) => {
@@ -389,115 +373,111 @@ async function run() {
       });
     } catch (err) {
       handleError(err);
-    } finally {
-      if (mongoOperator) { // eslint-disable-line functional/no-conditional-statements
-        mongoOperator.closeClient();
-      }
     }
+  }
 
-    function format(metadata) {
-      metadata.modificationTime = moment(metadata.modificationTime).toISOString(true); //eslint-disable-line functional/immutable-data
-      metadata.creationTime = moment(metadata.creationTime).toISOString(true); //eslint-disable-line functional/immutable-data
-      return metadata;
-    }
+  function format(metadata) {
+    metadata.modificationTime = moment(metadata.modificationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+    metadata.creationTime = moment(metadata.creationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+    return metadata;
+  }
 
-    function getQuery() {
-      const queriesArray = [
-        {
-          name: 'profile',
-          value: profile === undefined ? false : profile
-        },
-        {
-          name: 'state',
-          value: testBlobState(state) ? state : false
-        },
-        {
-          name: 'creationTime',
-          value: createTimeStampValue(testTimestamp(createdAfter, true), testTimestamp(createdBefore, true), testTimestamp(createdDay))
-        },
-        {
-          name: 'modificationTime',
-          value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
-        },
-        {
-          name: 'offset',
-          value: skip === undefined ? false : skip
-        },
-        {
-          name: 'limit',
-          value: limit === undefined ? false : limit
-        },
-        {
-          name: 'getAll',
-          value: handleGetAll(getAll, limit)
-        }
-      ]
-        .filter(param => param.value)
-        .map(param => [param.name, param.value]);
-      return Object.fromEntries(queriesArray);
+  function getQuery({profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}) {
+    const queriesArray = [
+      {
+        name: 'profile',
+        value: profile === undefined ? false : profile
+      },
+      {
+        name: 'state',
+        value: testBlobState(state) ? state : false
+      },
+      {
+        name: 'creationTime',
+        value: createTimeStampValue(testTimestamp(createdAfter, true), testTimestamp(createdBefore, true), testTimestamp(createdDay))
+      },
+      {
+        name: 'modificationTime',
+        value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
+      },
+      {
+        name: 'offset',
+        value: skip === undefined ? false : skip
+      },
+      {
+        name: 'limit',
+        value: limit === undefined ? false : limit
+      },
+      {
+        name: 'getAll',
+        value: handleGetAll(getAll, limit)
+      }
+    ]
+      .filter(param => param.value)
+      .map(param => [param.name, param.value]);
+    return Object.fromEntries(queriesArray);
 
-      function handleGetAll(getAll = undefined, limit = false) {
-        if (limit && getAll === undefined) {
-          return '0';
-        }
-
-        if (getAll === '0') {
-          return '0';
-        }
-
-        if (getAll === undefined) {
-          return false;
-        }
-
-        return '1';
+    function handleGetAll(getAll = undefined, limit = false) {
+      if (limit && getAll === undefined) {
+        return '0';
       }
 
-      function createTimeStampValue(after, before, day) {
-        if (!after && !before && !day) {
-          return false;
-        }
-
-        if (day) {
-          return `${day}T00:00:00+01:00,${day}T23:59:59+01:00`;
-        }
-
-        if (!after && before) {
-          return `1990-01-01,${before}`;
-        }
-
-        if (after && !before) {
-          return `${after},3000-01-01`;
-        }
-
-        return `${after},${before}`;
+      if (getAll === '0') {
+        return '0';
       }
 
-      function testTimestamp(timestamp, acceptHours = false) {
-        if (timestamp === undefined) {
-          return false;
-        }
-
-        //if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
-        if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}/u).test(timestamp)) {
-          const sliced = timestamp.slice(0, 19);
-          console.log(sliced); // eslint-disable-line
-          return moment(sliced).utc().toISOString();
-        }
-
-        if ((/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}$/u).test(timestamp)) {
-          return timestamp;
-        }
-
+      if (getAll === undefined) {
         return false;
       }
 
-      function testBlobState(state = false) {
-        if (state) {
-          return BLOB_STATE[state.toUpperCase()] !== undefined;
-        }
+      return '1';
+    }
 
+    function createTimeStampValue(after, before, day) {
+      if (!after && !before && !day) {
         return false;
       }
+
+      if (day) {
+        return `${day}T00:00:00+01:00,${day}T23:59:59+01:00`;
+      }
+
+      if (!after && before) {
+        return `1990-01-01,${before}`;
+      }
+
+      if (after && !before) {
+        return `${after},3000-01-01`;
+      }
+
+      return `${after},${before}`;
+    }
+
+    function testTimestamp(timestamp, acceptHours = false) {
+      if (timestamp === undefined) {
+        return false;
+      }
+
+      //if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
+      if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}/u).test(timestamp)) {
+        const sliced = timestamp.slice(0, 19);
+        console.log(sliced); // eslint-disable-line
+        return moment(sliced).utc().toISOString();
+      }
+
+      if ((/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}$/u).test(timestamp)) {
+        return timestamp;
+      }
+
+      return false;
+    }
+
+    function testBlobState(state = false) {
+      if (state) {
+        return BLOB_STATE[state.toUpperCase()] !== undefined;
+      }
+
+      return false;
     }
   }
 
