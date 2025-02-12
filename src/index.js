@@ -289,7 +289,7 @@ async function run() {
             .on('error', reject)
             .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
             .on('end', () => {
-              writeStream.write(JSON.stringify(chunks.join('')));
+              writeStream.write(chunks.join(''));
               // chunks.forEach(chunk => writeStream.write(chunk));
               writeStream.end();
               resolve();
@@ -353,8 +353,8 @@ async function run() {
 
   // MARK: Query Blobs
   // {profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}
-  function queryBlobs(query) {
-    const query = getQuery(query);
+  function queryBlobs(queryParams) {
+    const query = getQuery(queryParams);
     try {
 
       return new Promise((resolve, reject) => {
