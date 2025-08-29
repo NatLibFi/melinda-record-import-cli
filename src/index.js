@@ -2,7 +2,6 @@
 
 import fs from 'fs';
 import yargs from 'yargs';
-import mime from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
@@ -10,7 +9,7 @@ import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commo
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
   recordImportApiOptions, keycloakOptions
-} from './config';
+} from './config.js';
 
 run();
 
@@ -25,7 +24,6 @@ async function run() {
 
   await yargs(process.argv.slice(2))
     .scriptName('melinda-record-import-cli')
-    .wrap(yargs.terminalWidth())
     .epilog('Copyright (C) 2019-2023 University Of Helsinki (The National Library Of Finland)')
     .usage('Installed globally: $0 <environment> <operation> [options] and env variable info in README')
     .usage('Not installed: npx $0 <environment> <operation> [options] and env variable info in README')
@@ -241,7 +239,8 @@ async function run() {
     try {
       const id = await client.createBlob({
         profile, type: contentType,
-        blob: fs.createReadStream(file, {encoding: 'UTF-8'})
+        blob: fs.createReadStream(file, {encoding: 'UTF-8'}),
+        duplex: 'half'
       });
 
       logger.info(`Created a new blob ${id}`);
@@ -269,53 +268,34 @@ async function run() {
     }
 
     function format(metadata) {
-      metadata.modificationTime = moment(metadata.modificationTime).toISOString(true); //eslint-disable-line functional/immutable-data
-      metadata.creationTime = moment(metadata.creationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+      metadata.modificationTime = moment(metadata.modificationTime).toISOString(true);
+      metadata.creationTime = moment(metadata.creationTime).toISOString(true);
       return metadata;
     }
   }
 
   // MARK: Read Blob Content
-  async function readBlobContent({id, file}) {
+  async function readBlobContent({id, file = './readContent'}) {
     try {
-      const {contentType, readStream} = await client.getBlobContent({id});
+      const {readStream} = await client.getBlobContent({id});
       const chunks = [];
 
-      if (file) {
-        const writeStream = fs.createWriteStream(file);
+      const writeStream = fs.createWriteStream(file);
 
-        await new Promise((resolve, reject) => {
-          readStream
-            .on('error', reject)
-            .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
-            .on('end', () => {
-              writeStream.write(chunks.join(''));
-              // chunks.forEach(chunk => writeStream.write(chunk));
-              writeStream.end();
-              resolve();
-            });
-        });
+      await new Promise((resolve, reject) => {
+        readStream
+          .on('error', reject)
+          .on('data', chunk => chunks.push(chunk.toString('utf8')))
+          .on('end', () => {
+            writeStream.write(chunks.join(''));
+            // chunks.forEach(chunk => writeStream.write(chunk));
+            writeStream.end();
+            resolve();
+          });
+      });
 
-        logger.info(`Wrote blob content to file ${file}`);
-        return;
-      }
-
-      if (mime.getExtension(contentType) === 'bin' || !process.stdout.isTTY) {
-        await new Promise((resolve, reject) => {
-          readStream
-            .setEncoding('utf8')
-            .on('error', reject)
-            .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
-            .on('end', () => {
-              console.log(chunks.join('')); // eslint-disable-line no-console
-              resolve();
-            });
-        });
-        return;
-      }
-
-      logger.error(`Content type ${contentType} seems to be binary. Refusing to print to console`);
-      throw new Error('Unexpected read content error');
+      logger.info(`Wrote blob content to file ${file}`);
+      return;
     } catch (err) {
       handleError(err);
     }
@@ -367,7 +347,6 @@ async function run() {
           .on('blobs', blobs => {
             // Use console.log coz logger starts print with date and type
             const formatedBlobs = blobs.map(blob => format(blob));
-            // eslint-disable-next-line no-console
             console.log(JSON.stringify(formatedBlobs, undefined, 2)); //eslint-disable-line no-console
           });
       });
@@ -377,8 +356,8 @@ async function run() {
   }
 
   function format(metadata) {
-    metadata.modificationTime = moment(metadata.modificationTime).toISOString(true); //eslint-disable-line functional/immutable-data
-    metadata.creationTime = moment(metadata.creationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+    metadata.modificationTime = moment(metadata.modificationTime).toISOString(true);
+    metadata.creationTime = moment(metadata.creationTime).toISOString(true);
     return metadata;
   }
 
@@ -500,9 +479,8 @@ async function run() {
       const chunks = [];
 
       process.stdin
-        .setEncoding('utf8')
         .on('error', reject)
-        .on('data', chunk => chunks.push(chunk)) //eslint-disable-line functional/immutable-data
+        .on('data', chunk => chunks.push(chunk.toString('utf8')))
         .on('close', () => resolve(chunks.join('')));
     });
   }
