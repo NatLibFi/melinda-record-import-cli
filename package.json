@@ -23,7 +23,9 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"bin": "./dist/index.js",
+	"bin": {
+		"melinda-record-import-cli": "src/index.js"
+	},
 	"scripts": {
 		"prepare": "npm run build",
 		"lint": "eslint --fix src",
