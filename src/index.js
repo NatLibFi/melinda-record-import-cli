@@ -338,7 +338,7 @@ async function run() {
     try {
 
       return new Promise((resolve, reject) => {
-        logger.info(`Query: ${JSON.stringify(query)}`);
+        logger.debug(`Query: ${JSON.stringify(query)}`);
         const emitter = client.getBlobs(query);
 
         emitter
@@ -466,7 +466,7 @@ async function run() {
       return logger.error(`API call failed: ${HttpStatus[`${err.status}_MESSAGE`]} (${err.status})`);
     }
 
-    throw new Error(`Unexpected handle error: ${'stack' in err ? err.stack : err}`);
+    throw new Error(`Unexpected handle error: ${'stack' in err ? err.stack : 'message' in err ? err.message : err}`);
   }
 
   // MARK: Read data
