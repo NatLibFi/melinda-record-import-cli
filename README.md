@@ -3,6 +3,9 @@
 CLI for Melinda record batch import system
 
 # Usage
+### Envs
+See example.env file
+
 ### NPM
 ```sh
 $ npx @natlibfi/melinda-record-import-cli

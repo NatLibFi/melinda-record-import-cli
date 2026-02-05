@@ -2,20 +2,19 @@
 
 import fs from 'fs';
 import yargs from 'yargs';
-import {getExtension as getMimeExtension} from 'mime';
 import moment from 'moment';
 import HttpStatus from 'http-status';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {createApiClient, BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 import {handleInterrupt, createLogger} from '@natlibfi/melinda-backend-commons';
 import {
-  recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent
-} from './config';
+  recordImportApiOptions, keycloakOptions
+} from './config.js';
 
 run();
 
-function run() {
-  const client = createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent});
+async function run() {
+  const client = await createApiClient(recordImportApiOptions, keycloakOptions);
   const logger = createLogger();
 
   process
@@ -23,9 +22,8 @@ function run() {
     .on('unhandledRejection', handleInterrupt)
     .on('uncaughtException', handleInterrupt);
 
-  yargs(process.argv.slice(2))
+  await yargs(process.argv.slice(2))
     .scriptName('melinda-record-import-cli')
-    .wrap(yargs.terminalWidth())
     .epilog('Copyright (C) 2019-2023 University Of Helsinki (The National Library Of Finland)')
     .usage('Installed globally: $0 <environment> <operation> [options] and env variable info in README')
     .usage('Not installed: npx $0 <environment> <operation> [options] and env variable info in README')
@@ -107,13 +105,22 @@ function run() {
         })
         .command({
           command: 'query [options]',
-          desc: `Query blobs:\n - States: ${Object.values(BLOB_STATE)}\n - Timestamp formats for options: YYYY-MM-DD or YYYY-MM-DDThh:mm:ss±hh`,
+          desc: `Query blobs:
+           - Profile when interested on multiple use , reparator
+           - State when interested on multiple use , reparator
+           - States available: ${Object.values(BLOB_STATE)}
+           - Timestamp formats for options: YYYY-MM-DD or YYYY-MM-DDThh:mm:ss±hh`,
           builder: yargs => {
             yargs
               .options({
+                'p': {
+                  alias: 'profile',
+                  describe: 'Query blobs by profile(s) e.g. profile or progile1,profile2',
+                  requiresArg: true
+                },
                 's': {
                   alias: 'state',
-                  describe: 'Query blobs by state',
+                  describe: 'Query blobs by state(s) e.g. STATE or STATE1,STATE2',
                   requiresArg: true
                 },
                 'b': {
@@ -151,7 +158,19 @@ function run() {
                   describe: 'Query blobs modified by day',
                   requiresArg: true,
                   conflicts: ['A', 'B']
-                }
+                },
+                'skip': {
+                  describe: 'Query blobs and skip n records',
+                  requiresArg: true
+                },
+                'limit': {
+                  describe: 'Query blobs and limit received records to n (Does not work atm. Commons api client automaticaly gets all)',
+                  requiresArg: true
+                },
+                'getAll': {
+                  describe: 'Receive all records for query (1 or 0) (Does not work atm. Commons api client automaticaly gets all)',
+                  requiresArg: true
+                },
               });
           },
           handler: queryBlobs
@@ -160,6 +179,7 @@ function run() {
     .demandCommand(1)
     .parse();
 
+  // MARK: Create/Modify Profile
   async function modifyProfile({id, file}) {
     if (file === undefined && !fs.accessSync(file, fs.constants.R_OK)) {
       throw new Error('File parametter missing for creating/modifying blob');
@@ -174,6 +194,7 @@ function run() {
     }
   }
 
+  // MARK: Query Profiles
   async function queryProfiles() {
     try {
       const results = await client.queryProfiles();
@@ -183,6 +204,7 @@ function run() {
     }
   }
 
+  // MARK: Read Profile
   async function readProfile({id}) {
     try {
       const result = await client.getProfile({id});
@@ -194,6 +216,7 @@ function run() {
     }
   }
 
+  // MARK: Delete Profile
   async function deleteProfile({id}) {
     try {
       await client.deleteProfile({id});
@@ -203,6 +226,7 @@ function run() {
     }
   }
 
+  // MARK: Create Blob
   async function createBlob({profile, contentType, file}) {
     if (file === undefined && !fs.accessSync(file, fs.constants.R_OK)) {
       throw new Error('File parametter missing for creating blob');
@@ -215,76 +239,69 @@ function run() {
     try {
       const id = await client.createBlob({
         profile, type: contentType,
-        blob: fs.createReadStream(file, {encoding: 'UTF-8'})
+        blob: fs.createReadStream(file, {encoding: 'UTF-8'}),
+        duplex: 'half'
       });
 
       logger.info(`Created a new blob ${id}`);
+      return;
     } catch (err) {
       handleError(err);
     }
   }
 
+  // MARK: Read Blob
   async function readBlob({id}) {
     try {
       const result = await client.getBlobMetadata({id});
       // Use console.log coz logger starts print with date and type
+      if (result) {
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify(format(result), undefined, 2));
+        return;
+      }
       // eslint-disable-next-line no-console
-      console.log(JSON.stringify(format(result), undefined, 2));
+      console.log('404 Blob not found!');
+      return;
     } catch (err) {
       handleError(err);
     }
 
     function format(metadata) {
-      metadata.modificationTime = moment(metadata.modificationTime).toISOString(true); //eslint-disable-line functional/immutable-data
-      metadata.creationTime = moment(metadata.creationTime).toISOString(true); //eslint-disable-line functional/immutable-data
+      metadata.modificationTime = moment(metadata.modificationTime).toISOString(true);
+      metadata.creationTime = moment(metadata.creationTime).toISOString(true);
       return metadata;
     }
   }
 
-  async function readBlobContent({id, file}) {
+  // MARK: Read Blob Content
+  async function readBlobContent({id, file = './readContent'}) {
     try {
-      const {contentType, readStream} = await client.getBlobContent({id});
+      const {readStream} = await client.getBlobContent({id});
       const chunks = [];
 
-      if (file) {
-        const writeStream = fs.createWriteStream(file);
+      const writeStream = fs.createWriteStream(file);
 
-        await new Promise((resolve, reject) => {
-          readStream
-            .on('error', reject)
-            .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
-            .on('end', () => {
-              chunks.forEach(chunk => writeStream.write(chunk));
-              writeStream.end();
-              resolve();
-            });
-        });
+      await new Promise((resolve, reject) => {
+        readStream
+          .on('error', reject)
+          .on('data', chunk => chunks.push(chunk.toString('utf8')))
+          .on('end', () => {
+            writeStream.write(chunks.join(''));
+            // chunks.forEach(chunk => writeStream.write(chunk));
+            writeStream.end();
+            resolve();
+          });
+      });
 
-        logger.info(`Wrote blob content to file ${file}`);
-        return;
-      }
-
-      if (getMimeExtension(contentType) === 'bin' || !process.stdout.isTTY) {
-        await new Promise((resolve, reject) => {
-          readStream
-            .setEncoding('utf8')
-            .on('error', reject)
-            .on('data', chunk => chunks.push(chunk)) // eslint-disable-line functional/immutable-data
-            .on('end', () => {
-              console.log(chunks.join('')); // eslint-disable-line no-console
-              resolve();
-            });
-        });
-        return;
-      }
-
-      logger.error(`Content type ${contentType} seems to be binary. Refusing to print to console`);
-      throw new Error('Unexpected read content error');
+      logger.info(`Wrote blob content to file ${file}`);
+      return;
     } catch (err) {
       handleError(err);
     }
   }
 
+  // MARK: Delete Blob Content
   async function deleteBlobContent({id}) {
     try {
       await client.deleteBlobContent({id});
@@ -294,6 +311,7 @@ function run() {
     }
   }
 
+  // MARK: Delete Blob
   async function deleteBlob({id}) {
     try {
       await client.deleteBlob({id});
@@ -303,6 +321,7 @@ function run() {
     }
   }
 
+  // MARK: Abort Blob
   async function abortBlob({id}) {
     try {
       await client.setAborted({id});
@@ -312,12 +331,14 @@ function run() {
     }
   }
 
-  function queryBlobs({state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay}) {
-    const query = getQuery();
+  // MARK: Query Blobs
+  // {profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}
+  function queryBlobs(queryParams) {
+    const query = getQuery(queryParams);
     try {
 
       return new Promise((resolve, reject) => {
-        logger.info(`Query: ${JSON.stringify(query)}`);
+        logger.debug(`Query: ${JSON.stringify(query)}`);
         const emitter = client.getBlobs(query);
 
         emitter
@@ -325,87 +346,130 @@ function run() {
           .on('end', resolve)
           .on('blobs', blobs => {
             // Use console.log coz logger starts print with date and type
-            // eslint-disable-next-line no-console
-            console.log(JSON.stringify(blobs, undefined, 2)); //eslint-disable-line no-console
+            const formatedBlobs = blobs.map(blob => format(blob));
+            console.log(JSON.stringify(formatedBlobs, undefined, 2)); //eslint-disable-line no-console
           });
       });
     } catch (err) {
       handleError(err);
     }
+  }
 
-    function getQuery() {
-      const queriesArray = [
-        {
-          name: 'state',
-          value: testBlobState(state) ? state : false
-        },
-        {
-          name: 'creationTime',
-          value: createTimeStampValue(testTimestamp(createdAfter, true), testTimestamp(createdBefore, true), testTimestamp(createdDay))
-        },
-        {
-          name: 'modificationTime',
-          value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
-        }
-      ]
-        .filter(param => param.value)
-        .map(param => [param.name, param.value]);
-      return Object.fromEntries(queriesArray);
+  function format(metadata) {
+    metadata.modificationTime = moment(metadata.modificationTime).toISOString(true);
+    metadata.creationTime = moment(metadata.creationTime).toISOString(true);
+    return metadata;
+  }
 
-      function createTimeStampValue(after, before, day) {
-        if (!after && !before && !day) {
-          return false;
-        }
+  function getQuery({profile, state, createdBefore, createdAfter, modifiedBefore, modifiedAfter, createdDay, modifiedDay, skip, limit, getAll}) {
+    const queriesArray = [
+      {
+        name: 'profile',
+        value: profile === undefined ? false : profile
+      },
+      {
+        name: 'state',
+        value: testBlobState(state) ? state : false
+      },
+      {
+        name: 'creationTime',
+        value: createTimeStampValue(testTimestamp(createdAfter, true), testTimestamp(createdBefore, true), testTimestamp(createdDay))
+      },
+      {
+        name: 'modificationTime',
+        value: createTimeStampValue(testTimestamp(modifiedAfter, true), testTimestamp(modifiedBefore, true), testTimestamp(modifiedDay))
+      },
+      {
+        name: 'offset',
+        value: skip === undefined ? false : skip
+      },
+      {
+        name: 'limit',
+        value: limit === undefined ? false : limit
+      },
+      {
+        name: 'getAll',
+        value: handleGetAll(getAll, limit)
+      }
+    ]
+      .filter(param => param.value)
+      .map(param => [param.name, param.value]);
+    return Object.fromEntries(queriesArray);
 
-        if (day) {
-          return [`${day}T00:00:00+01:00`, `${day}T23:59:59+01:00`];
-        }
-
-        if (!after && before) {
-          return ['1990-01-01', before];
-        }
-
-        if (after && !before) {
-          return [after, '3000-01-01'];
-        }
-
-        return [after, before];
+    function handleGetAll(getAll = undefined, limit = false) {
+      if (limit && getAll === undefined) {
+        return '0';
       }
 
-      function testTimestamp(timestamp, acceptHours = false) {
-        if (timestamp === undefined) {
-          return false;
-        }
+      if (getAll === '0') {
+        return '0';
+      }
 
-        if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
-          return moment(timestamp).utc();
-        }
-
-        if ((/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}$/u).test(timestamp)) {
-          return timestamp;
-        }
-
+      if (getAll === undefined) {
         return false;
       }
 
-      function testBlobState(state = false) {
-        if (state) {
-          return BLOB_STATE[state.toUpperCase()] !== undefined;
-        }
+      return '1';
+    }
 
+    function createTimeStampValue(after, before, day) {
+      if (!after && !before && !day) {
         return false;
       }
+
+      if (day) {
+        return `${day}T00:00:00+01:00,${day}T23:59:59+01:00`;
+      }
+
+      if (!after && before) {
+        return `1990-01-01,${before}`;
+      }
+
+      if (after && !before) {
+        return `${after},3000-01-01`;
+      }
+
+      return `${after},${before}`;
+    }
+
+    function testTimestamp(timestamp, acceptHours = false) {
+      if (timestamp === undefined) {
+        return false;
+      }
+
+      //if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}[+-][0-2]{1}\d{1}/u).test(timestamp)) {
+      if (acceptHours && (/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}T[0-2]{1}\d{1}:[0-6]{1}\d{1}:[0-6]{1}\d{1}/u).test(timestamp)) {
+        const sliced = timestamp.slice(0, 19);
+        console.log(sliced); // eslint-disable-line
+        return moment(sliced).utc().toISOString();
+      }
+
+      if ((/^\d{4}-[01]{1}\d{1}-[0-3]{1}\d{1}$/u).test(timestamp)) {
+        return timestamp;
+      }
+
+      return false;
+    }
+
+    function testBlobState(state = false) {
+      if (state) {
+        return BLOB_STATE[state.toUpperCase()] !== undefined;
+      }
+
+      return false;
     }
   }
 
+  // MARK: Handle Error
   function handleError(err) {
     if (err instanceof ApiError) {
       return logger.error(`API call failed: ${HttpStatus[`${err.status}_MESSAGE`]} (${err.status})`);
     }
 
-    throw new Error(`Unexpected handle error: ${'stack' in err ? err.stack : err}`);
+    throw new Error(`Unexpected handle error: ${'stack' in err ? err.stack : 'message' in err ? err.message : err}`);
   }
 
+  // MARK: Read data
   function readData(filename) {
     if (filename) {
       return fs.readFileSync(filename, 'utf8');
@@ -415,9 +479,8 @@ function run() {
       const chunks = [];
 
       process.stdin
-        .setEncoding('utf8')
         .on('error', reject)
-        .on('data', chunk => chunks.push(chunk)) //eslint-disable-line functional/immutable-data
+        .on('data', chunk => chunks.push(chunk.toString('utf8')))
         .on('close', () => resolve(chunks.join('')));
     });
   }
