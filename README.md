@@ -41,6 +41,23 @@ $ npm run build
 $ node dist/index.js
 ```
 
+## Scripts
+
+### Abort blobs
+
+This script is made for aborting blobs that were made by mistake.
+1. Make json file from blobs using cli `node dist/index.js blobs -p <profile> -s <state> > abortBlobs.json`
+2. Remove blobs that are ok from list
+3. Run abort script for rest `./scripts/abort_blobs.sh ./abortBlobs.json`
+
+### Read blobs
+
+This script is made for reading blobs to files
+1. Make json file from blobs using cli `node dist/index.js blobs -p <profile> -s <state> > readBlobs.json`
+2. Remove blobs that are ok from list
+3. Run abort script for rest ``./scripts/read_blobs.sh ./readBlobs.json`
+
+
 ## License and copyright
 
 Copyright (c) 2021-2023 **University Of Helsinki (The National Library Of Finland)**
