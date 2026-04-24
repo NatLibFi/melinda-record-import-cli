@@ -12,6 +12,8 @@ jobs:
   build-node-versions:
     name: Node version matrix
     runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Helsinki
 
     strategy:
       matrix:
@@ -69,7 +71,6 @@ jobs:
       - uses: actions/checkout@v6
       - name: Clean install
         run: npm ci
-      # Add build step here if you don't have prepare script
       # Publish stable release with --tag=latest
       - name: Publish stable release
         if: ${{!contains(github.ref, '-alpha')}}

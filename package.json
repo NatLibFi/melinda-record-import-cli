@@ -36,7 +36,7 @@
 	"dependencies": {
 		"@natlibfi/melinda-backend-commons": "4.0.0-alpha.1",
 		"@natlibfi/melinda-commons": "14.0.2",
-		"@natlibfi/melinda-record-import-commons": "^13.0.3",
+		"@natlibfi/melinda-record-import-commons": "^13.0.6",
 		"http-status": "^2.1.0",
 		"luxon": "^3.7.2",
 		"yargs": "^18.0.0"
