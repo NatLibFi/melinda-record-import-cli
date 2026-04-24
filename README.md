@@ -55,11 +55,11 @@ This script is made for aborting blobs that were made by mistake.
 This script is made for reading blobs to files
 1. Make json file from blobs using cli `node dist/index.js blobs -p <profile> -s <state> > readBlobs.json`
 2. Remove blobs that are ok from list
-3. Run abort script for rest ``./scripts/read_blobs.sh ./readBlobs.json`
+3. Run abort script for rest `./scripts/read_blobs.sh ./readBlobs.json`
 
 
 ## License and copyright
 
-Copyright (c) 2021-2023 **University Of Helsinki (The National Library Of Finland)**
+Copyright (c) 2021-2026 **University Of Helsinki (The National Library Of Finland)**
 
 This project's source code is licensed under the terms of **MIT** or any later version.

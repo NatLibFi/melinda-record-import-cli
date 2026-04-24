@@ -7,8 +7,8 @@ import {BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 
 export const command = 'query [options]';
 export const desc = `Query blobs:
-       - Profile when interested on multiple use , reparator
-       - State when interested on multiple use , reparator
+       - Profile; when interested on multiple use , as separator
+       - State; when interested on multiple use , as separator
        - States available: ${Object.values(BLOB_STATE)}
        - Timestamp formats for options: YYYY-MM-DD or YYYY-MM-DDThh:mm:ss±hh`;
 export const builder = function (yargs) {
@@ -17,7 +17,7 @@ export const builder = function (yargs) {
       'f': {
         alias: 'file',
         type: 'string',
-        describe: 'Save queryed blobs to file',
+        describe: 'Save queried blobs to file',
         requiresArg: true
       },
       'p': {

@@ -14,7 +14,7 @@ async function run() {
   await yargs(process.argv.slice(2))
     .commandDir('cmds')
     .scriptName('melinda-record-import-cli')
-    .epilog('Copyright (C) 2019-2023 University Of Helsinki (The National Library Of Finland)')
+    .epilog('Copyright (C) 2019-2026 University Of Helsinki (The National Library Of Finland)')
     .usage('Installed globally: $0 <environment> <operation> [options] and env variable info in README')
     .usage('Not installed: npx $0 <environment> <operation> [options] and env variable info in README')
     .usage('Build from source: node dist/index.js <environment> <operation> [options] and env variable info in README')

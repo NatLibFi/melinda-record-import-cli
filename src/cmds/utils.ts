@@ -147,7 +147,7 @@ export function format(metadata) {
 
 export function readDataString(file: string) {
   if (file === undefined) {
-    throw new Error('File parametter missing');
+    throw new Error('File parameter missing');
   }
 
   if (file && !fs.existsSync(file)) {
