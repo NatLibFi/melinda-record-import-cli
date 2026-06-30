@@ -34,7 +34,7 @@
 		"watch": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'"
 	},
 	"dependencies": {
-		"@natlibfi/melinda-backend-commons": "3.0.4",
+		"@natlibfi/melinda-backend-commons": "3.0.6",
 		"@natlibfi/melinda-commons": "14.0.2",
 		"@natlibfi/melinda-record-import-commons": "^13.0.3",
 		"http-status": "^2.1.0",
