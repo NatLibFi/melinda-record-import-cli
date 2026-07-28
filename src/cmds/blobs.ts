@@ -9,7 +9,8 @@ export const builder = function (yargs) {
       ['$ $0 blobs deleteContent --help', 'Shows all blob delete content options'],
       ['$ $0 blobs read --help', 'Shows all blob read options'],
       ['$ $0 blobs readContent --help', 'Shows all blob read content options'],
-      ['$ $0 blobs query --help', 'Shows all blob query options']
+      ['$ $0 blobs query --help', 'Shows all blob query options'],
+      ['$ $0 blobs abort --help', 'Shows all blob abort options']
     ]);
 };
 export const handler = function (_argv) { };
