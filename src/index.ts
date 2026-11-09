@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import yargs from 'yargs';
-import {handleInterrupt} from '@natlibfi/melinda-backend-commons';
+import {handleInterrupt} from '@natlibfi/melinda-commons';
 
 run();
 

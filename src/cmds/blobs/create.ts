@@ -40,7 +40,7 @@ export const handler = async function (argv) {
   try {
     const id = await client.createBlob({
       profile, type: contentType,
-      blob: fs.createReadStream(file, {encoding: 'utf-8'}),
+      blob: fs.readFileSync(file, {encoding: 'utf-8'}),
       duplex: 'half'
     });
 

@@ -12,8 +12,8 @@ export const handler = async function (argv) {
 
   try {
     const data = await readDataString(file);
-    const payload = JSON.stringify(data);
-    await client.modifyProfile({id: profile, payload});
+    const payload = JSON.parse(data);
+    await client.createOrModifyProfile({id: profile, payload});
     console.log(`Created/updated profile ${profile}`);
   } catch (err) {
     handleError(err);
